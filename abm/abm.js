@@ -169,6 +169,9 @@ function refreshDefineList() {
   define_section = {};
   updateDefineList(0, mfiles.config.text);
   updateDefineList(1, mfiles.config_adv.text);
+
+  // Display data as an interactive tree
+  //pv.postMessage({ command:'tree', data: define_list });
   //console.log("Define list:", define_list);
 }
 
