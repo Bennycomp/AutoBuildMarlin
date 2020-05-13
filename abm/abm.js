@@ -87,6 +87,44 @@ function init(c, v) {
   set_context('abm.inited', true);
 }
 
+//
+// Parse configs to get information about all defines
+// such as where it occurs, what its parent defines are,
+// and so on. Also try to figure out what kind of data is
+// expected based on the set value.
+//
+// Also examine preceding and end-of-line comments to get
+// the "help text" and a list of values, if supplied.
+//
+// This data can then be used to generate one or more form
+// fields that trigger update messages, and to update the
+// appropriate lines with in the config files in the correct
+// value(s) format. Defines that have children will hide
+// those children when disabled.
+//
+// The simplest layout concept is to take the entire config
+// and parse it in a big list. Parent items are at root, and
+// those with children have a colored background and a
+// "reveal" widget. Child items should be compact so we can fit
+// 2-3 fields across. Grouped (XYZE) items need to align left.
+//
+// I do want to make the layouts customized for each configuration,
+// but I also want the flexibility to grab fields from the config
+// files as they change. So, my idea is simply to wrap all the fields
+// in span containers. To create the panel, we send all the fields
+// in the relevant section to the web view script as soon as the panel
+// is selected. The web view takes care of creating the fields, adding
+// them to the DOM, and showing the panel. The CSS uses a FLEX layout
+// with certain named spans included, while the ones not named in the
+// layout will be placed into the "fallback" location, probably down
+// at the bottom.
+//
+// For the Geometry panel a simple hook is added to update the canvas
+// whenever the fields are updated. And the canvas has interactive bits
+// that update the geometry fields. If there is a pause of a few seconds
+// or the panel is switched then the changes are applied to the configs.
+//
+
 var define_list,    // arrays with all define names
     define_occur,   // lines where defines occur in each file
     define_section; // the section of each define
@@ -936,7 +974,8 @@ function homeContent() {
   panes.geometry = load_pane('geom');
 
   // Load LCD pane
-  panes.lcd = load_pane('lcd');
+  const opt = '<option value="1">Test 123</option>';
+  panes.lcd = load_pane('lcd', { lcd_options: opt, check_label: "Check me!" });
 
   // Load SD pane
   panes.sd = load_pane('sd');
@@ -996,6 +1035,7 @@ function run_command(action) {
   if (panel) {
     panel.reveal(vscode.ViewColumn.One);
     runSelectedAction();
+    //vw.showInformationMessage('ABM Action: ' + (action ? action : ''));
   }
   else {
 
@@ -1051,6 +1091,8 @@ function run_command(action) {
 
     // Create an IPC file for messages from Terminal
     createIPCFile();
+
+    //vw.showInformationMessage('ABM View Ready: ' + (action ? action : ''));
   }
   set_context('abm.visible', true);
 }
