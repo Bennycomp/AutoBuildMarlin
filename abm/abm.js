@@ -23,6 +23,7 @@ function set_context(name, value) {
 }
 
 function init(c, v) {
+  if (bugme) console.log('<=== AUTO BUILD MARLIN ===>');
   context = c;
   vscode = v;
   vc = v.commands;
@@ -33,7 +34,6 @@ function init(c, v) {
   project_path = ws.workspaceFolders[0].uri.fsPath;
   marlin.init(vscode, bugme);
   set_context('inited', true);
-  if (bugme) console.clear();
 }
 
 /**
@@ -169,22 +169,21 @@ function onIPCFileChange() {
 function onBuildFolderChanged(e, fname, env) {
   cancelBuildRefresh();
 
-  if (isBuildFilename(fname)) {
-    // If the firmware file changed, assume the build is done now
-    refresh_to = [ setTimeout(()=>{ unwatchBuildFolder(); }, 500) ];
+  if (fname.match(/.+\.(bin|hex)$/i)) {
+    // If the BIN or HEX file changed, assume the build is done now
+    refresh_to.push(setTimeout(()=>{ unwatchBuildFolder(); }, 500));
     if (bugme) console.log(`onBuildFolderChanged (bin/hex): ${env}`);
   }
   else {
-    refresh_to = [
-      // Set timeouts that assume lots of changes are underway
-      setTimeout(()=>{ refreshBuildStatus(env); }, 500),
-      // Assume nothing will pause for more than 15 seconds
-      setTimeout(()=>{ unwatchBuildFolder(); }, 15000)
-    ];
+    // Set timeouts that assume lots of changes are underway
+    refresh_to.push(setTimeout(()=>{ refreshBuildStatus(env); }, 500));
+    // Assume nothing will pause for more than 15 seconds
+    refresh_to.push(setTimeout(()=>{ unwatchBuildFolder(); }, 15000));
     if (bugme) console.log(`onBuildFolderChanged: ${env}`);
   }
 }
 
+// Local reference to parsed board info
 var board_info;
 
 /**
@@ -290,18 +289,6 @@ function refreshNewData() {
     postError('Please open Marlin in the workspace.');
 }
 
-const bin_filenames = [
-  'firmware.bin', 'firmware.hex',
-  'firmware_for_sd_upload.bin',
-  'mksLite.bin', 'mksLite3.bin',
-  'project.bin',
-  'Robin.bin', 'Robin_e3.bin', 'Robin_mini.bin', 'Robin_nano.bin', 'Robin_pro.bin'
-];
-
-function isBuildFilename(name) {
-  return bin_filenames.includes(name);
-}
-
 //
 // Get information about the last (or current) build
 //  - exists, completed, busy, stamp
@@ -315,23 +302,19 @@ function lastBuild(env) {
         stamp: ''
       };
 
+  // If the build folder exists...
   if (out.exists) {
 
-    const dirlist = fs.readdirSync(bp, { withFileTypes: true });
-    const files = dirlist.filter((e) => {
-      console.log(e)
-      return true;
-      //return e.match(/.*\.(bin|hex)/ig);
+    // Find a .bin or .hex file in the folder
+    const dirlist = fs.readdirSync(bp);
+    const bins = dirlist.filter((n) => {
+      return n.match(/.+\.(bin|hex)$/i);
     });
-    console.log("Matching files", files);
-    // console.log("Matching files");
 
-    // Get the built binary path, if any
-    // Method: Find one of a list of files
     var tp = bp;
-    for (const fn of bin_filenames) {
-      const fp = envBuildPath(env, fn);
-      if (fs.existsSync(fp)) { tp = fp; out.completed = true; break; }
+    if (bins.length) {
+      tp = envBuildPath(env, bins[0]);
+      out.completed = true;
     }
 
     // Get the date of the build (or folder)
@@ -643,7 +626,7 @@ function run_command(action) {
   else {
 
     panel = vw.createWebviewPanel(
-      'marlinConfig', 'Auto Build Marlin',
+      'marlinConfig', 'Auto Build',
       vscode.ViewColumn.One,
       {
         enableCommandUris: true,         // The view can accept commands?
