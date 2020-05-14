@@ -601,6 +601,10 @@ function handleWebViewMessage(m) {
       refreshNewData();      // Reload configs and refresh the view
       return;
 
+    case 'monitor':          // Monitor button
+      vc.executeCommand('platformio-ide.serialMonitor');
+      return;
+
     case 'pio':              // Build, Upload, Clean...
       //vw.showInformationMessage('Starting ' + nicer[m.cmd].toTitleCase() + ' for ' + m.env);
       pio_command(m.cmd, m.env);
