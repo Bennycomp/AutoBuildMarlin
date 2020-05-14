@@ -366,3 +366,5 @@ div.subtabs button.active {
   background: #3BB175;
   color: #FFF;
   }
+
+a.reveal { font-size: 120%; }
